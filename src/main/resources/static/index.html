@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DolphinBot Web Console</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Xterm.js CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css">
+    <!-- Xterm.js JS -->
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
+    <!-- Xterm.js Fit Addon -->
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
+    <!-- Xterm.js WebLinks Addon -->
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-web-links@0.9.0/lib/xterm-addon-web-links.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#165DFF',
+                        success: '#00B42A',
+                        warning: '#FF7D00',
+                        danger: '#F53F3F',
+                        dark: '#1D2129',
+                        'dark-800': '#2B2F36',
+                        'dark-700': '#4E5969',
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.3s ease-out',
+                        'slide-up': 'slideUp 0.3s ease-out',
+                        'slide-in-right': 'slideInRight 0.3s ease-out',
+                        'scale-in': 'scaleIn 0.3s ease-out',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        slideUp: {
+                            '0%': { transform: 'translateY(20px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' },
+                        },
+                        slideInRight: {
+                            '0%': { transform: 'translateX(100%)', opacity: '0' },
+                            '100%': { transform: 'translateX(0)', opacity: '1' },
+                        },
+                        scaleIn: {
+                            '0%': { transform: 'scale(0.9)', opacity: '0' },
+                            '100%': { transform: 'scale(1)', opacity: '1' },
+                        },
+                    },
+                },
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <i class="fas fa-robot text-primary text-2xl"></i>
+                <h1 class="text-2xl font-bold text-gray-900">DolphinBot Web Console</h1>
+            </div>
+            <div class="flex items-center space-x-4">
+                <span id="api-status" class="flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
+                    <i class="fas fa-circle text-xs mr-2 text-red-500"></i>
+                    API Disconnected
+                </span>
+                <button id="refresh-btn" class="p-2 rounded-md hover:bg-gray-100 transition-colors">
+                    <i class="fas fa-sync-alt text-gray-600"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <!-- Bot Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div class="bg-white rounded-lg shadow-sm p-6 border border-gray-200 flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Total Bots</p>
+                    <p id="total-bots" class="text-3xl font-bold text-gray-900">0</p>
+                </div>
+                <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-users text-primary text-xl"></i>
+                </div>
+            </div>
+            
+            <!-- 圆形进度条 -->
+            <div class="bg-white rounded-lg shadow-sm p-6 border border-gray-200 flex items-center justify-center">
+                <div class="relative">
+                    <svg class="w-24 h-24 transform -rotate-90">
+                        <circle cx="48" cy="48" r="40" stroke="#E5E7EB" stroke-width="8" fill="none"/>
+                        <circle id="online-progress" cx="48" cy="48" r="40" stroke="#00B42A" stroke-width="8" fill="none" 
+                                stroke-dasharray="251.2" stroke-dashoffset="251.2" 
+                                class="transition-all duration-500 ease-out"/>
+                    </svg>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <span id="online-percentage" class="text-2xl font-bold text-gray-900">0%</span>
+                    </div>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Online Rate</p>
+                    <p id="online-count" class="text-lg font-semibold text-success">0/0</p>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow-sm p-6 border border-gray-200 flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Offline Bots</p>
+                    <p id="offline-bots" class="text-3xl font-bold text-danger">0</p>
+                </div>
+                <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-times-circle text-danger text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bot List -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+            <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+                <h2 class="text-lg font-semibold text-gray-900">Bot Instances</h2>
+                <button id="add-bot-btn" class="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-md transition-colors flex items-center space-x-2">
+                    <i class="fas fa-plus"></i>
+                    <span>Add New Bot</span>
+                </button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Profile</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Game Mode</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Position</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bots-table-body" class="divide-y divide-gray-200">
+                        <tr>
+                            <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                                <i class="fas fa-spinner fa-spin mr-2"></i>
+                                Loading bots...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Terminal Section -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-terminal text-primary text-xl"></i>
+                    <h2 class="text-lg font-semibold text-gray-900">Bot Terminals</h2>
+                    <span id="ws-status" class="flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                        <i class="fas fa-circle text-xs mr-1 text-red-500"></i>
+                        WS Disconnected
+                    </span>
+                </div>
+                <button id="clear-all-terminals" class="p-2 rounded-md hover:bg-gray-100 transition-colors">
+                    <i class="fas fa-trash-alt text-gray-600"></i>
+                    <span class="ml-1">Clear All</span>
+                </button>
+            </div>
+            
+            <!-- Terminal Tabs -->
+            <div class="border-b border-gray-200 bg-gray-50">
+                <div id="terminal-tabs" class="flex space-x-1 px-4 py-1">
+                    <!-- Tabs will be added dynamically -->
+                </div>
+            </div>
+            
+            <!-- Terminal Content -->
+            <div id="terminal-container" class="bg-dark min-h-[400px]">
+                <!-- Terminal instances will be added dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 自定义弹窗组件 -->
+    <div id="modal-overlay" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden animate-fade-in">
+        <div id="modal-container" class="flex items-center justify-center min-h-screen p-4">
+            <!-- Modal content will be dynamically inserted here -->
+        </div>
+    </div>
+
+    <!-- 通知气泡容器 -->
+    <div id="notification-container" class="fixed top-4 right-4 z-50 space-y-2">
+        <!-- Notifications will be dynamically inserted here -->
+    </div>
+
+    <script>
+        // 终端管理系统
+        class TerminalManager {
+            constructor() {
+                this.terminals = new Map(); // botName -> { term, fitAddon, command, placeholder }
+                this.activeBot = '';
+                this.ws = null; // command WebSocket
+                this.logWs = null; // log WebSocket
+                this.bots = [];
+                const isMobile = window.innerWidth < 768;
+            }
+
+            // 初始化WebSocket连接
+            initWebSockets() {
+                this.connectCommandWebSocket();
+                this.connectLogWebSocket();
+            }
+
+            // 连接命令WebSocket
+            connectCommandWebSocket() {
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsUrl = `${protocol}//${window.location.host}/ws/terminal`;
+
+                console.log("Terminal url opened at: " + wsUrl);
+                
+                this.ws = new WebSocket(wsUrl);
+
+                this.ws.onopen = () => {
+                    document.getElementById('ws-status').className = 'flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800';
+                    document.getElementById('ws-status').innerHTML = '<i class="fas fa-circle text-xs mr-1 text-green-500"></i> WS Connected';
+                };
+
+                this.ws.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'output' || data.type === 'system' || data.type === 'error') {
+                        // 命令响应，显示在当前终端
+                        const activeTerminal = this.terminals.get(this.activeBot);
+                        // if (activeTerminal) {
+                        //     activeTerminal.term.write(data.content);
+                        //     activeTerminal.term.write(activeTerminal.placeholder);
+                        // }
+                    }
+                };
+
+                this.ws.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                };
+
+                this.ws.onclose = () => {
+                    document.getElementById('ws-status').className = 'flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800';
+                    document.getElementById('ws-status').innerHTML = '<i class="fas fa-circle text-xs mr-1 text-red-500"></i> WS Disconnected';
+                    
+                    // Reconnect after 3 seconds
+                    setTimeout(() => this.connectCommandWebSocket(), 3000);
+                };
+            }
+
+            // 连接日志WebSocket
+            connectLogWebSocket() {
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const apiHost = window.location.hostname;
+                const logWsUrl = `${protocol}//${apiHost}:25561`;
+                
+                this.logWs = new WebSocket(logWsUrl);
+
+                this.logWs.onopen = () => {
+                    console.log('Log WebSocket connected');
+                };
+
+                this.logWs.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    let terminal;
+                    if (data.type === 'log') {
+                        // 日志消息，根据target分发到对应终端
+                        const targetBot = data.target;
+                        if (targetBot) {
+                            terminal = this.terminals.get(targetBot);
+                            terminal.term.write('\x1b[2K\r');
+                            if (terminal) {
+                                // console.log(data.content)
+                                terminal.term.write(data.content.replaceAll('\n', '\r\n'));
+                            }
+                        }else {
+                            for (let value of this.terminals.values()) {
+                                value.term.write('\x1b[2K\r');
+                                if (terminal) {
+                                    value.term.write(data.content.replaceAll('\n', '\r\n'));
+                                }
+                            }
+                        }
+                        terminal.term.write(terminal.placeholder + terminal.command);
+                    } else if (data.type === 'completion') {
+                        // 补全结果，显示在当前终端
+                        const activeTerminal = this.terminals.get(this.activeBot);
+                        if (activeTerminal) {
+                            this.handleCompletion(activeTerminal, data);
+                        }
+                    }
+                };
+
+                this.logWs.onerror = (error) => {
+                    console.error('Log WebSocket error:', error);
+                };
+
+                this.logWs.onclose = () => {
+                    console.log('Log WebSocket disconnected, reconnecting...');
+                    setTimeout(() => this.connectLogWebSocket(), 3000);
+                };
+            }
+
+            // 处理补全结果
+            handleCompletion(terminal, data) {
+                const candidates = data.candidates;
+                if (candidates && candidates.length > 0) {
+                    if (candidates.length === 1) {
+                        // 只有一个候选，直接补全
+                        const input = data.input;
+                        const commonPrefix = this.findCommonPrefix(candidates);
+                        if (commonPrefix.length > input.length) {
+                            // 清空当前行
+                            terminal.term.write('\x1b[2K\r' + terminal.placeholder);
+                            // 写入补全后的内容
+                            terminal.command = commonPrefix;
+                            terminal.term.write(commonPrefix);
+                        }
+                    } else {
+                        // 多个候选，显示所有选项
+                        terminal.term.write('\e[1F');
+                        terminal.term.write('\r\n' + candidates.join('  ') + '\r\n');
+                        terminal.term.write(terminal.placeholder + terminal.command);
+                    }
+                }
+            }
+
+            // 找到字符串数组的公共前缀
+            findCommonPrefix(strings) {
+                if (strings.length === 0) return '';
+                let prefix = strings[0];
+                for (let i = 1; i < strings.length; i++) {
+                    while (strings[i].indexOf(prefix) !== 0) {
+                        prefix = prefix.substring(0, prefix.length - 1);
+                        if (prefix === '') break;
+                    }
+                }
+                return prefix;
+            }
+
+            // 创建终端实例
+            createTerminal(botName) {
+                if (this.terminals.has(botName)) {
+                    return this.terminals.get(botName);
+                }
+
+                // 创建终端容器
+                const container = document.createElement('div');
+                container.id = `terminal-${botName}`;
+                container.className = 'w-full h-[400px] hidden';
+                document.getElementById('terminal-container').appendChild(container);
+
+                // 创建终端实例
+                const term = new Terminal({
+                    cursorBlink: true,
+                    fontSize: 14,
+                    fontFamily: '"Cascadia Code", Menlo, monospace',
+                    lineHeight: 1.2,
+                    windowWidth: container.clientWidth,
+                    cols: 190,
+                    line: 24,
+                    theme: {
+                        background: '#1D2129',
+                        foreground: '#FFFFFF',
+                        cursor: '#FFFFFF',
+                        selection: '#44475A',
+                        black: '#000000',
+                        red: '#cb0101',
+                        green: '#00a22b',
+                        yellow: '#fda01e',
+                        blue: '#0f43b4',
+                        magenta: '#b4036a',
+                        cyan: '#00917c',
+                        white: '#BFBFBF',
+                        brightBlack: '#4D4D4D',
+                        brightRed: '#ff716a',
+                        brightGreen: '#43ff83',
+                        brightYellow: '#f6ff6c',
+                        brightBlue: '#49a3fc',
+                        brightMagenta: '#ff69bf',
+                        brightCyan: '#59e3ff',
+                        brightWhite: '#E6E6E6'
+                    }
+                });
+
+                term.width = container.clientWidth;
+
+                const fitAddon = new FitAddon.FitAddon();
+                term.loadAddon(fitAddon);
+                
+                const webLinksAddon = new WebLinksAddon.WebLinksAddon();
+                term.loadAddon(webLinksAddon);
+
+                term.open(container);
+                fitAddon.fit();
+
+                const placeholder = `${botName}> `;
+                const terminalInfo = {
+                    term: term,
+                    fitAddon: fitAddon,
+                    command: '',
+                    placeholder: placeholder
+                };
+
+                // 终端事件处理
+                term.onKey(({ key, domEvent }) => {
+                    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+                    
+                    if (domEvent.key === 'Enter') {
+                        this.ws.send(JSON.stringify({
+                            type: 'command',
+                            botName: botName,
+                            command: terminalInfo.command.trim()
+                        }));
+                        console.log(`Command sent to ${botName}: ${terminalInfo.command}`);
+                        term.write('\x1b[2K\r');
+                        term.write(placeholder);
+                        terminalInfo.command = '';
+                    } else if (domEvent.key === 'Tab') {
+                        // Tab补全
+                        domEvent.preventDefault();
+                        const cursor = term.buffer.active.cursorX - placeholder.length;
+                        
+                        if (this.logWs && this.logWs.readyState === WebSocket.OPEN) {
+                            this.logWs.send(JSON.stringify({
+                                type: 'complete',
+                                input: terminalInfo.command,
+                                cursor: cursor
+                            }));
+                        }
+                    }
+                });
+
+                term.onData(e => {
+                    switch (e) {
+                        case '\u0003': // Ctrl+C
+                            term.write('^C');
+                            term.write('\r\n' + placeholder);
+                            terminalInfo.command = '';
+                            break;
+                        case '\r': // Enter
+                            terminalInfo.command = '';
+                            break;
+                        case '\u007F': // Backspace (DEL)
+                            // Do not delete the prompt
+                            if (terminalInfo.command.length > 0 || term._core.buffer.x > placeholder.length) {
+                                term.write('\b \b');
+                                if (terminalInfo.command.length > 0) {
+                                    terminalInfo.command = terminalInfo.command.slice(0, terminalInfo.command.length - 1);
+                                }
+                            }
+                            break;
+                        default: // Print all other characters
+                            if (e >= String.fromCharCode(0x20) && e <= String.fromCharCode(0x7E) || e >= '\u00a0') {
+                                terminalInfo.command += e;
+                                term.write(e);
+                            }
+                    }
+                });
+
+                // 写入欢迎信息
+                term.writeln(`\x1b[32mConnected to Dolphin terminal, player: ${botName}\x1b[0m`);
+                term.write(placeholder);
+
+                // 保存终端实例
+                this.terminals.set(botName, terminalInfo);
+
+                // 创建标签页
+                this.createTerminalTab(botName);
+
+                return terminalInfo;
+            }
+
+            // 创建终端标签页
+            createTerminalTab(botName) {
+                const tabsContainer = document.getElementById('terminal-tabs');
+                
+                const tab = document.createElement('button');
+                tab.className = 'px-4 py-2 text-sm font-medium rounded-t-md focus:outline-none';
+                tab.textContent = botName;
+                tab.dataset.botName = botName;
+                
+                tab.addEventListener('click', () => {
+                    this.switchTerminal(botName);
+                });
+
+                tabsContainer.appendChild(tab);
+            }
+
+            // 切换终端
+            switchTerminal(botName) {
+                if (!this.terminals.has(botName)) {
+                    this.createTerminal(botName);
+                }
+
+                // 隐藏所有终端
+                this.terminals.forEach((terminal, name) => {
+                    document.getElementById(`terminal-${name}`).classList.add('hidden');
+                    const tab = document.querySelector(`[data-bot-name="${name}"]`);
+                    if (tab) {
+                        tab.className = 'px-4 py-2 text-sm font-medium rounded-t-md focus:outline-none';
+                    }
+                });
+
+                // 显示当前终端
+                document.getElementById(`terminal-${botName}`).classList.remove('hidden');
+                const activeTab = document.querySelector(`[data-bot-name="${botName}"]`);
+                if (activeTab) {
+                    activeTab.className = 'px-4 py-2 text-sm font-medium rounded-t-md bg-white border border-gray-200 border-b-0 focus:outline-none';
+                }
+
+                this.activeBot = botName;
+            }
+
+            // 更新bot列表
+            updateBots(botsList) {
+                this.bots = botsList;
+                
+                // 为在线的bot创建终端
+                const onlineBots = botsList.filter(b => b.isConnected);
+                onlineBots.forEach(bot => {
+                    this.createTerminal(bot.name);
+                });
+
+                // 如果没有活跃终端，激活第一个在线bot
+                if (!this.activeBot && onlineBots.length > 0) {
+                    this.switchTerminal(onlineBots[0].name);
+                }
+            }
+
+            // 清空所有终端
+            clearAllTerminals() {
+                this.terminals.forEach((terminal, botName) => {
+                    terminal.term.clear();
+                    terminal.term.writeln(`\x1b[32mSwiched to bot ${botName}\x1b[0m`);
+                    terminal.term.write(terminal.placeholder);
+                });
+            }
+        }
+
+        // 初始化终端管理器
+        const terminalManager = new TerminalManager();
+        let bots = [];
+
+        // 弹窗管理系统
+        class ModalManager {
+            constructor() {
+                this.overlay = document.getElementById('modal-overlay');
+                this.container = document.getElementById('modal-container');
+            }
+
+            show(title, content, onConfirm = null, onCancel = null) {
+                const modalHtml = `
+                    <div class="bg-white rounded-lg shadow-xl max-w-md w-full animate-scale-in">
+                        <div class="p-6">
+                            <h3 class="text-xl font-semibold text-gray-900 mb-4">${title}</h3>
+                            <div class="mb-6">
+                                ${content}
+                            </div>
+                            <div class="flex justify-end space-x-3">
+                                ${onCancel ? `
+                                    <button id="modal-cancel" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors">
+                                        Cancel
+                                    </button>
+                                ` : ''}
+                                ${onConfirm ? `
+                                    <button id="modal-confirm" class="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors">
+                                        Confirm
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                this.container.innerHTML = modalHtml;
+                this.overlay.classList.remove('hidden');
+
+                if (onCancel) {
+                    document.getElementById('modal-cancel').addEventListener('click', () => {
+                        this.hide();
+                        onCancel();
+                    });
+                }
+
+                if (onConfirm) {
+                    document.getElementById('modal-confirm').addEventListener('click', () => {
+                        this.hide();
+                        onConfirm();
+                    });
+                }
+
+                // 点击遮罩层关闭
+                this.overlay.addEventListener('click', (e) => {
+                    if (e.target === this.overlay) {
+                        this.hide();
+                        if (onCancel) onCancel();
+                    }
+                });
+            }
+
+            hide() {
+                this.overlay.classList.add('hidden');
+                this.container.innerHTML = '';
+            }
+        }
+
+        // 通知管理系统
+        class NotificationManager {
+            constructor() {
+                this.container = document.getElementById('notification-container');
+            }
+
+            show(message, type = 'info', duration = 3000) {
+                const notification = document.createElement('div');
+                
+                const colors = {
+                    success: 'bg-green-500',
+                    error: 'bg-red-500',
+                    warning: 'bg-yellow-500',
+                    info: 'bg-blue-500'
+                };
+
+                const icons = {
+                    success: 'fa-check-circle',
+                    error: 'fa-exclamation-circle',
+                    warning: 'fa-exclamation-triangle',
+                    info: 'fa-info-circle'
+                };
+
+                notification.className = `flex items-center p-4 rounded-lg shadow-lg ${colors[type]} text-white animate-slide-in-right min-w-[300px]`;
+                notification.innerHTML = `
+                    <i class="fas ${icons[type]} mr-3"></i>
+                    <span class="flex-1">${message}</span>
+                    <button class="ml-3 hover:opacity-75 transition-opacity">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+
+                // 关闭按钮
+                const closeBtn = notification.querySelector('button');
+                closeBtn.addEventListener('click', () => {
+                    this.dismiss(notification);
+                });
+
+                this.container.appendChild(notification);
+
+                // 自动关闭
+                if (duration > 0) {
+                    setTimeout(() => {
+                        this.dismiss(notification);
+                    }, duration);
+                }
+            }
+
+            dismiss(notification) {
+                notification.style.opacity = '0';
+                notification.style.transform = 'translateX(100%)';
+                notification.style.transition = 'all 0.3s ease-out';
+                
+                setTimeout(() => {
+                    notification.remove();
+                }, 300);
+            }
+
+            success(message, duration) {
+                this.show(message, 'success', duration);
+            }
+
+            error(message, duration) {
+                this.show(message, 'error', duration);
+            }
+
+            warning(message, duration) {
+                this.show(message, 'warning', duration);
+            }
+
+            info(message, duration) {
+                this.show(message, 'info', duration);
+            }
+        }
+
+        // 初始化管理器
+        const modalManager = new ModalManager();
+        const notificationManager = new NotificationManager();
+
+        // 替代系统alert
+        function showAlert(title, message, type = 'info') {
+            modalManager.show(title, `
+                <div class="flex items-start">
+                    <i class="fas fa-${type === 'error' ? 'exclamation-circle text-red-500' : type === 'success' ? 'check-circle text-green-500' : 'info-circle text-blue-500'} text-xl mr-3 mt-1"></i>
+                    <p class="text-gray-700">${message}</p>
+                </div>
+            `, "Ok");
+        }
+
+        function showConfirm(title, message, onConfirm, onCancel) {
+            modalManager.show(title, `
+                <div class="flex items-start">
+                    <i class="fas fa-question-circle text-blue-500 text-xl mr-3 mt-1"></i>
+                    <p class="text-gray-700">${message}</p>
+                </div>
+            `, onConfirm, onCancel);
+        }
+
+        // 添加Bot模态框
+        function showAddBotModal() {
+            modalManager.show('Add New Bot', `
+                <form id="add-bot-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                        <input type="text" id="username" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50" placeholder="Enter bot username" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                        <input type="password" id="password" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50" value="123" placeholder="Enter bot password" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Language</label>
+                        <select id="language" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50">
+                            <option value="zh">简体中文</option>
+                            <option value="en">English</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Server IP</label>
+                        <input type="text" id="server" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50" placeholder="mc.example.com" required>
+                    </div>
+                </form>
+            `, async () => openCreateBotDialog()
+                // 确认添加bot
+            , "Cancel");
+        }
+
+        async function openCreateBotDialog(){
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const language = document.getElementById('language').value;
+            const server = document.getElementById('server').value;
+
+            if (!username || !password || !server) {
+                showAlert('Please fill in all required fields', "error");
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/bot/create`, {
+                    method: 'POST',
+                    body: {
+                        name: username,
+                        server: server,
+                        password: password,
+                        language: language
+                    }
+                });
+                const data = await res.json();
+                if (data.success){
+                    notificationManager.info("Successfully created new bot "+username)
+                }else{
+                    notificationManager.error("Error creating bot "+username+", "+data.message)
+                }
+
+                await stopBot()
+                notificationManager.success(`Bot "${username}" added successfully!`);
+                await fetchBots();
+            } catch (error) {
+                notificationManager.error(`Failed to add bot: ${error.message}`);
+            }
+        }
+
+        // 找到字符串数组的公共前缀
+        function findCommonPrefix(strings) {
+            if (strings.length === 0) return '';
+            let prefix = strings[0];
+            for (let i = 1; i < strings.length; i++) {
+                while (strings[i].indexOf(prefix) !== 0) {
+                    prefix = prefix.substring(0, prefix.length - 1);
+                    if (prefix === '') break;
+                }
+            }
+            return prefix;
+        }
+
+        // Fetch Bots
+        async function fetchBots() {
+            try {
+                const res = await fetch('/api/bots/health');
+                const healthData = await res.json();
+                
+                if (healthData.data.available) {
+                    document.getElementById('api-status').className = 'flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800';
+                    document.getElementById('api-status').innerHTML = '<i class="fas fa-circle text-xs mr-2 text-green-500"></i> API Connected';
+                } else {
+                    document.getElementById('api-status').className = 'flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800';
+                    document.getElementById('api-status').innerHTML = '<i class="fas fa-circle text-xs mr-2 text-red-500"></i> API Disconnected';
+                }
+
+                const botsRes = await fetch('/api/bots');
+                const botsData = await botsRes.json();
+                
+                if (botsData.success) {
+                    bots = botsData.data;
+                    renderBotsTable();
+                    updateStats();
+                    // 更新终端管理器的bot列表
+                    terminalManager.updateBots(bots);
+                }
+            } catch (error) {
+                console.error('Failed to fetch bots:', error);
+                document.getElementById('api-status').className = 'flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800';
+                document.getElementById('api-status').innerHTML = '<i class="fas fa-circle text-xs mr-2 text-red-500"></i> API Disconnected';
+            }
+        }
+
+        // Render Bots Table
+        function renderBotsTable() {
+            const tbody = document.getElementById('bots-table-body');
+            
+            if (bots.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                            <i class="fas fa-inbox mr-2"></i>
+                            No bots found
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            console.log(bots)
+            currentBot = bots[0].name;
+
+            tbody.innerHTML = bots.map(bot => `
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="font-medium text-gray-900">${bot.name}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-gray-600">
+                        ${bot.profileName || '-'}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${bot.isConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                            ${bot.isConnected ? 'Online' : 'Offline'}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-gray-600">
+                        ${bot.gameMode || '-'}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-gray-600">
+                        ${bot.isConnected ? `X: ${bot.position.x.toFixed(1)}, Y: ${bot.position.y.toFixed(1)}, Z: ${bot.position.z.toFixed(1)}` : '-'}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                        ${bot.isConnected ? `
+                            <button onclick="stopBot('${bot.name}')" class="text-danger hover:text-danger/80 transition-colors">
+                                <i class="fas fa-stop"></i> Stop
+                            </button>
+                            <button onclick="selectBotForTerminal('${bot.name}')" class="text-primary hover:text-primary/80 transition-colors">
+                                <i class="fas fa-terminal"></i> Terminal
+                            </button>
+                        ` : `
+                            <button onclick="startBot('${bot.profileName}')" class="text-success hover:text-success/80 transition-colors">
+                                <i class="fas fa-play"></i> Start
+                            </button>
+                        `}
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+
+
+        // Update Stats
+        function updateStats() {
+            const total = bots.length;
+            const online = bots.filter(b => b.isConnected).length;
+            const offline = total - online;
+            
+            document.getElementById('total-bots').textContent = total;
+            document.getElementById('offline-bots').textContent = offline;
+            
+            // 更新圆形进度条
+            const percentage = total > 0 ? Math.round((online / total) * 100) : 0;
+            document.getElementById('online-percentage').textContent = percentage + '%';
+            document.getElementById('online-count').textContent = `${online}/${total}`;
+            
+            // 更新进度条
+            const progressCircle = document.getElementById('online-progress');
+            const circumference = 251.2; // 2 * PI * 40
+            const offset = circumference - (percentage / 100) * circumference;
+            progressCircle.style.strokeDashoffset = offset;
+            
+            // 根据百分比改变颜色
+            if (percentage === 100) {
+                progressCircle.setAttribute('stroke', '#00B42A'); // 全绿
+            } else if (percentage >= 50) {
+                progressCircle.setAttribute('stroke', '#FF7D00'); // 橙色
+            } else {
+                progressCircle.setAttribute('stroke', '#F53F3F'); // 红色
+            }
+        }
+
+        // Start Bot
+        async function startBot(profileName) {
+            try {
+                const res = await fetch(`/api/bots/${encodeURIComponent(profileName)}/start`, { method: 'POST' });
+                const data = await res.json();
+                
+                if (data.success) {
+                    notificationManager.success('Bot started successfully!');
+                    await fetchBots();
+                } else {
+                    showAlert('Failed to Start Bot', data.message, 'error');
+                }
+            } catch (error) {
+                showAlert('Error Starting Bot', error.message, 'error');
+            }
+        }
+
+        // Stop Bot
+        async function stopBot(botName) {
+            showConfirm('Stop Bot', `Are you sure you want to stop bot "${botName}"?`, async () => {
+                try {
+                    const res = await fetch(`/api/bots/${encodeURIComponent(botName)}/stop`, { method: 'POST' });
+                    const data = await res.json();
+                    
+                    if (data.success) {
+                        notificationManager.success('Bot stopped successfully!');
+                        await fetchBots();
+                    } else {
+                        showAlert('Failed to Stop Bot', data.message, 'error');
+                    }
+                } catch (error) {
+                    showAlert('Error Stopping Bot', error.message, 'error');
+                }
+            });
+        }
+
+        // Select Bot for Terminal
+        function selectBotForTerminal(botName) {
+            terminalManager.switchTerminal(botName);
+        }
+
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            // 初始化终端管理器
+            terminalManager.initWebSockets();
+            fetchBots();
+
+            // Refresh button
+            document.getElementById('refresh-btn').addEventListener('click', fetchBots);
+
+            // Clear all terminals button
+            document.getElementById('clear-all-terminals').addEventListener('click', () => {
+                terminalManager.clearAllTerminals();
+            });
+
+            // Add bot button
+            document.getElementById('add-bot-btn').addEventListener('click', () => {
+                showAddBotModal();
+            });
+
+            // Auto refresh every 10 seconds
+            setInterval(fetchBots, 10000);
+        });
+    </script>
+</body>
+</html>
