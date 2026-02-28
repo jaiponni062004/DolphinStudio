@@ -98,15 +98,38 @@ public class BotController {
     @PostMapping("/bot/create")
     public ResponseEntity<?> createBot(@RequestBody Map<String, String> request) {
         try {
-            this.botApiService.createBot(request);
+            if (this.botApiService.createBot(request)) {
+                return ResponseEntity.status(200).body(Map.of(
+                        "success", true
+                ));
+            }
         } catch (IOException e) {
             return ResponseEntity.status(500).body(Map.of(
                     "success", false,
                     "message", "Failed to create bot: " + e.getMessage()
             ));
         }
-        return ResponseEntity.status(200).body(Map.of(
-                "success", true
+        return ResponseEntity.status(400).body(Map.of(
+                "success", false
+        ));
+    }
+
+    @PostMapping("/{botName}/delete")
+    public ResponseEntity<?> deleteBot(@PathVariable String botName){
+        try {
+            if (this.botApiService.deleteBot(botName)) {
+                return ResponseEntity.status(200).body(Map.of(
+                        "success", true
+                ));
+            }
+        } catch (IOException e) {
+            return ResponseEntity.status(500).body(Map.of(
+                    "success", false,
+                    "message", "Failed to create bot: " + e.getMessage()
+            ));
+        }
+        return ResponseEntity.status(400).body(Map.of(
+                "success", false
         ));
     }
 

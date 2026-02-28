@@ -128,7 +128,19 @@ public class DolphinBotApiService {
                 .build();
 
         try (Response response = client.newCall(request).execute()) {
-            return true;
+            return response.isSuccessful();
+        }
+    }
+
+    public boolean deleteBot(String botName) throws IOException{
+        Map<String, Object> requestBody = Map.of("botName", botName);
+        RequestBody body = RequestBody.create(gson.toJson(requestBody), JSON);
+        Request request = new Request.Builder()
+                .url(apiBaseUrl + "/bot/delete")
+                .post(body)
+                .build();
+        try (Response response = client.newCall(request).execute()) {
+            return response.isSuccessful();
         }
     }
 
